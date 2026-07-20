@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 const NAV_LINKS = [
   { href: "/how-it-works", label: "How it works" },
   { href: "/subjects", label: "Biology syllabus" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 export async function SiteHeader() {

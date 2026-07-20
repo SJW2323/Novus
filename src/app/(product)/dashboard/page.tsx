@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { extractTopicName } from "@/lib/utils";
+import { TIERS, type Tier } from "@/lib/stripe";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -12,7 +13,7 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  const [{ data: profile }, { data: mastery }, { data: sessions }] =
+  const [{ data: profile }, { data: mastery }, { data: sessions }, { data: subscription }] =
     await Promise.all([
       supabase.from("profiles").select("full_name, exam_board").eq("id", user.id).single(),
       supabase
@@ -27,9 +28,27 @@ export default async function DashboardPage() {
         .eq("student_id", user.id)
         .order("started_at", { ascending: false })
         .limit(5),
+      supabase
+        .from("subscriptions")
+        .select("tier, status, current_period_start")
+        .eq("student_id", user.id)
+        .maybeSingle(),
     ]);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
+
+  const isActive = subscription?.status === "active" && subscription.tier;
+  const tierConfig = isActive ? TIERS[subscription!.tier as Tier] : null;
+
+  let sessionsThisPeriod = 0;
+  if (isActive && subscription!.current_period_start) {
+    const { count } = await supabase
+      .from("sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("student_id", user.id)
+      .gte("started_at", subscription!.current_period_start);
+    sessionsThisPeriod = count ?? 0;
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -46,6 +65,23 @@ export default async function DashboardPage() {
           Start a session
         </Button>
       </div>
+
+      {isActive && tierConfig ? (
+        <p className="mt-6 text-sm text-muted-foreground">
+          {tierConfig.label} plan ·{" "}
+          {tierConfig.sessionsPerWeek === null
+            ? "unlimited sessions this week"
+            : `${sessionsThisPeriod} of ${tierConfig.sessionsPerWeek} session${tierConfig.sessionsPerWeek === 1 ? "" : "s"} used this week`}
+        </p>
+      ) : (
+        <p className="mt-6 text-sm text-muted-foreground">
+          You don&apos;t have an active plan yet —{" "}
+          <Link href="/pricing" className="font-medium text-foreground underline">
+            choose one
+          </Link>{" "}
+          to start a session.
+        </p>
+      )}
 
       <div className="mt-10 grid gap-8 md:grid-cols-2">
         <Card className="border-border/70 p-6">

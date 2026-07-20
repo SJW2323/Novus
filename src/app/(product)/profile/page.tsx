@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 const EXAM_BOARDS = ["AQA", "OCR", "Edexcel"] as const;
+const TIER_LABELS: Record<string, string> = { bronze: "Bronze", silver: "Silver", gold: "Gold" };
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
@@ -17,25 +19,46 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [subscription, setSubscription] = useState<{ tier: string; status: string } | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, exam_board, year_group")
-        .eq("id", user.id)
-        .single();
+      const [{ data }, { data: sub }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("full_name, exam_board, year_group")
+          .eq("id", user.id)
+          .single(),
+        supabase
+          .from("subscriptions")
+          .select("tier, status")
+          .eq("student_id", user.id)
+          .maybeSingle(),
+      ]);
 
       if (data) {
         setFullName(data.full_name ?? "");
         setExamBoard((data.exam_board as (typeof EXAM_BOARDS)[number]) ?? "AQA");
         setYearGroup(data.year_group ?? "");
       }
+      if (sub) setSubscription(sub);
       setLoading(false);
     });
   }, []);
+
+  async function handleManageBilling() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = (await res.json()) as { url?: string };
+      if (data.url) window.location.href = data.url;
+    } finally {
+      setPortalLoading(false);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -111,6 +134,34 @@ export default function ProfilePage() {
             {saving ? "Saving…" : saved ? "Saved" : "Save changes"}
           </Button>
         </form>
+      </Card>
+
+      <Card className="mt-6 border-border/70 p-6">
+        <h2 className="font-heading text-lg font-semibold">Billing</h2>
+        {subscription?.status === "active" ? (
+          <>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {TIER_LABELS[subscription.tier] ?? subscription.tier} plan · active
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={handleManageBilling}
+              disabled={portalLoading}
+            >
+              {portalLoading ? "Loading…" : "Manage billing"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No active subscription yet.
+            </p>
+            <Button className="mt-4" render={<Link href="/pricing" />}>
+              View plans
+            </Button>
+          </>
+        )}
       </Card>
     </div>
   );

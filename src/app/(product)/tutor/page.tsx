@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   createClient as createAnamClient,
   AnamEvent,
@@ -27,6 +28,7 @@ export default function TutorPage() {
   const [muted, setMuted] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [needsSubscription, setNeedsSubscription] = useState(false);
 
   const clientRef = useRef<AnamClient | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -69,6 +71,9 @@ export default function TutorPage() {
         const res = await fetch("/api/session/start", { method: "POST" });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
+          if (body.code === "NO_SUBSCRIPTION" || body.code === "LIMIT_REACHED") {
+            setNeedsSubscription(true);
+          }
           throw new Error(body.error ?? "Failed to start session");
         }
         const { sessionToken, sessionId } = (await res.json()) as {
@@ -187,8 +192,13 @@ export default function TutorPage() {
             </div>
           )}
           {status === "error" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-secondary/60 px-6 text-center text-sm text-destructive">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/60 px-6 text-center text-sm text-destructive">
               {errorMessage}
+              {needsSubscription && (
+                <Button size="sm" render={<Link href="/pricing" />}>
+                  View plans
+                </Button>
+              )}
             </div>
           )}
         </div>
