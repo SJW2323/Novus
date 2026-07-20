@@ -17,12 +17,22 @@ export default function LoginPage() {
   );
 }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  confirmation_failed:
+    "That link expired or was already used. Try logging in, or request a new one below.",
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    () => {
+      const code = searchParams.get("error");
+      return code ? (ERROR_MESSAGES[code] ?? "Something went wrong.") : null;
+    },
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -68,7 +78,15 @@ function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
