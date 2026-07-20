@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DnaHelix, MoleculeField } from "@/components/decorative";
+
+const TUTOR_FACE_URL =
+  "https://newgxnc1uqs0jnqm.public.blob.vercel-storage.com/avatars/stock/olivia.webp";
 
 const HOW_IT_WORKS = [
   {
@@ -33,47 +37,59 @@ const SYLLABUS_UNITS = [
 export default function HomePage() {
   return (
     <>
-      <section className="mx-auto grid max-w-6xl gap-16 px-6 pb-20 pt-16 md:grid-cols-2 md:items-center md:pt-24">
-        <div className="space-y-6">
-          <Badge
-            variant="secondary"
-            className="rounded-full px-3 py-1 text-xs font-medium tracking-wide uppercase"
-          >
-            A-level Biology · AI tutor
-          </Badge>
-          <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
-            Meet the tutor who remembers how you learn.
-          </h1>
-          <p className="max-w-md text-lg text-muted-foreground text-pretty">
-            Novus is a face you talk to, not a chatbot you type at. Every
-            conversation feels like a video call with a tutor who&rsquo;s paying
-            attention, and who gets to know you a little better each time.
-          </p>
-          <div className="flex flex-wrap items-center gap-4">
-            <Button size="lg" render={<Link href="/signup" />}>
-              Start free
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              render={<Link href="/how-it-works" />}
-            >
-              See how it works
-            </Button>
-          </div>
-        </div>
+      <section className="bg-hero-glow relative overflow-hidden">
+        <DnaHelix className="animate-float-slow pointer-events-none absolute -top-10 -left-4 hidden h-[520px] w-24 opacity-60 md:block" />
+        <DnaHelix className="animate-float-slow pointer-events-none absolute -right-6 -bottom-16 hidden h-[420px] w-20 opacity-40 lg:block" />
 
-        <CallPreview />
+        <div className="relative mx-auto grid max-w-6xl gap-16 px-6 pt-16 pb-20 md:grid-cols-2 md:items-center md:pt-24">
+          <div className="space-y-6">
+            <Badge
+              variant="secondary"
+              className="rounded-full px-3 py-1 text-xs font-medium tracking-wide uppercase"
+            >
+              Live · Face-to-face · AQA · OCR · Edexcel
+            </Badge>
+            <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
+              The tutor who never gets tired of{" "}
+              <span className="text-gradient-brand">
+                &ldquo;wait, can you explain that again?&rdquo;
+              </span>
+            </h1>
+            <p className="max-w-md text-lg text-muted-foreground text-pretty">
+              Novus is a face you talk to, not a chatbot you type at. Every
+              conversation feels like a live one-on-one lesson — one that
+              remembers exactly where you left off, whenever you&rsquo;re stuck.
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <Button size="lg" render={<Link href="/signup" />}>
+                Start free
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                render={<Link href="/how-it-works" />}
+              >
+                See how it works
+              </Button>
+            </div>
+          </div>
+
+          <CallPreview />
+        </div>
       </section>
 
-      <section className="border-y border-border/70 bg-secondary/30">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+      <section className="relative overflow-hidden border-y border-border/70 bg-secondary/30">
+        <MoleculeField className="absolute inset-0 h-full w-full opacity-70" />
+        <div className="relative mx-auto max-w-6xl px-6 py-20">
           <h2 className="font-heading text-center text-3xl font-semibold">
             How a session works
           </h2>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             {HOW_IT_WORKS.map((item) => (
-              <Card key={item.step} className="border-border/70 p-6">
+              <Card
+                key={item.step}
+                className="glow-card border-border/70 bg-card/80 p-6 backdrop-blur"
+              >
                 <span className="font-heading text-sm text-primary">
                   {item.step}
                 </span>
@@ -106,8 +122,15 @@ export default function HomePage() {
             {SYLLABUS_UNITS.map((unit) => (
               <li
                 key={unit}
-                className="rounded-lg border border-border/70 bg-card px-4 py-3 text-sm"
+                className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-4 py-3 text-sm"
               >
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--glow-blue), var(--glow-purple))",
+                  }}
+                />
                 {unit}
               </li>
             ))}
@@ -115,8 +138,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-6 py-16 text-center">
+      <section
+        className="relative overflow-hidden text-primary-foreground"
+        style={{
+          backgroundImage:
+            "linear-gradient(120deg, var(--glow-blue), var(--glow-purple))",
+        }}
+      >
+        <DnaHelix className="pointer-events-none absolute -top-16 right-8 hidden h-72 w-16 opacity-30 md:block" />
+        <div className="relative mx-auto max-w-6xl px-6 py-16 text-center">
           <h2 className="font-heading text-3xl font-semibold text-balance">
             Your next session is one call away.
           </h2>
@@ -140,21 +170,26 @@ export default function HomePage() {
 function CallPreview() {
   return (
     <div className="relative mx-auto w-full max-w-sm">
-      <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-xl">
+      <div className="glow-ring overflow-hidden rounded-3xl border border-border/70 bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="size-2 rounded-full bg-primary" />
+            <span className="size-2 animate-pulse-glow rounded-full bg-primary" />
             Live with Novus
           </div>
           <span className="text-xs text-muted-foreground">12:04</span>
         </div>
-        <div className="relative flex aspect-[4/5] items-center justify-center bg-gradient-to-b from-secondary to-secondary/40">
-          <div className="size-32 rounded-full bg-gradient-to-br from-primary to-primary/60 shadow-lg" />
-          <div className="absolute inset-x-6 bottom-6 flex items-end justify-center gap-1">
+        <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-b from-secondary to-secondary/40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={TUTOR_FACE_URL}
+            alt="Novus tutor avatar"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-x-6 bottom-4 flex items-end justify-center gap-1">
             {[6, 10, 16, 9, 13, 7].map((h, i) => (
               <span
                 key={i}
-                className="w-1.5 rounded-full bg-primary/70"
+                className="w-1.5 rounded-full bg-primary/80 shadow-[0_0_8px_var(--glow-blue)]"
                 style={{ height: `${h * 3}px` }}
               />
             ))}
