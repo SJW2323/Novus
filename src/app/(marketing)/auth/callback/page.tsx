@@ -19,33 +19,33 @@ function AuthCallbackHandler() {
   useEffect(() => {
     const next = searchParams.get("next") ?? "/dashboard";
     const supabase = createClient();
-    let settled = false;
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session && !settled) {
-        settled = true;
-        router.replace(next);
+    async function run() {
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const code = searchParams.get("code");
+
+      let ok = false;
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        ok = !error;
+      } else if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        ok = !error;
+      } else {
+        const { data } = await supabase.auth.getSession();
+        ok = !!data.session;
       }
-    });
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session && !settled) {
-        settled = true;
-        router.replace(next);
-      }
-    });
+      router.replace(ok ? next : "/login?error=confirmation_failed");
+    }
 
-    const timeout = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        router.replace("/login?error=confirmation_failed");
-      }
-    }, 5000);
-
-    return () => {
-      listener.subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+    run();
   }, [router, searchParams]);
 
   return (
