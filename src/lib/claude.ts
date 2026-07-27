@@ -8,18 +8,34 @@ export const anthropic = new Anthropic({
 // Swap to claude-haiku-4-5 if turn latency ends up hurting the "live call" feel.
 export const TUTOR_MODEL = "claude-sonnet-5";
 
-// Claude sometimes wraps JSON responses in ```json fences despite being
-// told not to - strip them before parsing rather than failing silently.
-function parseJsonResponse<T>(raw: string): T | null {
+// Claude sometimes wraps JSON responses in ```json fences, or adds a
+// stray sentence before/after the object, despite being told not to.
+// Strip fences first, then fall back to extracting the outermost {...}
+// block rather than failing silently on the whole response.
+function parseJsonResponse<T>(raw: string, context: string): T | null {
   const stripped = raw
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/```\s*$/, "");
+
   try {
     return JSON.parse(stripped) as T;
   } catch {
-    return null;
+    // fall through to bracket extraction below
   }
+
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    try {
+      return JSON.parse(stripped.slice(start, end + 1)) as T;
+    } catch {
+      // fall through to logging below
+    }
+  }
+
+  console.error(`[claude] failed to parse JSON response for ${context}:`, raw.slice(0, 500));
+  return null;
 }
 
 export interface MasteryRow {
@@ -148,7 +164,7 @@ ${transcriptText}`,
   const textBlock = response.content.find((block) => block.type === "text");
   const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
 
-  const parsed = parseJsonResponse<SessionSummaryResult>(raw);
+  const parsed = parseJsonResponse<SessionSummaryResult>(raw, "summarizeSession");
   return (
     parsed ?? {
       summary: raw.slice(0, 500),
@@ -192,6 +208,6 @@ Known syllabus topics you can reference in topicName: ${knownTopics.join(", ")}.
   const textBlock = response.content.find((block) => block.type === "text");
   const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
 
-  const parsed = parseJsonResponse<{ cards: GeneratedFlashcard[] }>(raw);
+  const parsed = parseJsonResponse<{ cards: GeneratedFlashcard[] }>(raw, "generateFlashcards");
   return parsed?.cards ?? [];
 }

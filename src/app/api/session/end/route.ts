@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     });
 
     if (cards.length > 0) {
-      await admin.from("flashcards").insert(
+      const { error: flashcardError } = await admin.from("flashcards").insert(
         cards.map((card) => ({
           student_id: user.id,
           session_id: sessionId,
@@ -158,6 +158,11 @@ export async function POST(request: Request) {
           back: card.back,
         })),
       );
+      if (flashcardError) {
+        console.error("[session/end] flashcard insert failed:", flashcardError.message);
+      }
+    } else {
+      console.error("[session/end] generateFlashcards returned 0 cards for session", sessionId);
     }
   }
 
