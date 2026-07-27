@@ -188,7 +188,7 @@ export async function generateFlashcards({
 }: {
   transcript: { role: "user" | "assistant"; content: string }[];
   knownTopics: string[];
-}): Promise<{ cards: GeneratedFlashcard[]; debugRaw: string }> {
+}): Promise<GeneratedFlashcard[]> {
   const transcriptText = transcript
     .map((m) => `${m.role === "user" ? "Student" : "Tutor"}: ${m.content}`)
     .join("\n");
@@ -209,5 +209,5 @@ Known syllabus topics you can reference in topicName: ${knownTopics.join(", ")}.
   const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
 
   const parsed = parseJsonResponse<{ cards: GeneratedFlashcard[] }>(raw, "generateFlashcards");
-  return { cards: parsed?.cards ?? [], debugRaw: raw };
+  return parsed?.cards ?? [];
 }

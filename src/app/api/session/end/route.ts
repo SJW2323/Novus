@@ -142,14 +142,11 @@ export async function POST(request: Request) {
     );
   }
 
-  let flashcardDebug: { cardsCount: number; raw: string } | null = null;
-
   if (subscription?.tier === "silver" || subscription?.tier === "gold") {
-    const { cards, debugRaw } = await generateFlashcards({
+    const cards = await generateFlashcards({
       transcript,
       knownTopics: (topics ?? []).map((t) => t.topic_name),
     });
-    flashcardDebug = { cardsCount: cards.length, raw: debugRaw.slice(0, 800) };
 
     if (cards.length > 0) {
       const { error: flashcardError } = await admin.from("flashcards").insert(
@@ -183,5 +180,5 @@ export async function POST(request: Request) {
     .update({ status: "completed", ended_at: new Date().toISOString() })
     .eq("id", sessionId);
 
-  return NextResponse.json({ ok: true, flashcardDebug });
+  return NextResponse.json({ ok: true });
 }
