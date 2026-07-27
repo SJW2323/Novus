@@ -8,6 +8,20 @@ export const anthropic = new Anthropic({
 // Swap to claude-haiku-4-5 if turn latency ends up hurting the "live call" feel.
 export const TUTOR_MODEL = "claude-sonnet-5";
 
+// Claude sometimes wraps JSON responses in ```json fences despite being
+// told not to - strip them before parsing rather than failing silently.
+function parseJsonResponse<T>(raw: string): T | null {
+  const stripped = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/, "");
+  try {
+    return JSON.parse(stripped) as T;
+  } catch {
+    return null;
+  }
+}
+
 export interface MasteryRow {
   topicName: string;
   masteryLevel: number;
@@ -134,17 +148,16 @@ ${transcriptText}`,
   const textBlock = response.content.find((block) => block.type === "text");
   const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
 
-  try {
-    return JSON.parse(raw) as SessionSummaryResult;
-  } catch {
-    return {
+  const parsed = parseJsonResponse<SessionSummaryResult>(raw);
+  return (
+    parsed ?? {
       summary: raw.slice(0, 500),
       topicsCovered: [],
       styleNotes: {},
       pacingNotes: "",
       engagementNotes: "",
-    };
-  }
+    }
+  );
 }
 
 export interface GeneratedFlashcard {
@@ -179,10 +192,6 @@ Known syllabus topics you can reference in topicName: ${knownTopics.join(", ")}.
   const textBlock = response.content.find((block) => block.type === "text");
   const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
 
-  try {
-    const parsed = JSON.parse(raw) as { cards: GeneratedFlashcard[] };
-    return parsed.cards ?? [];
-  } catch {
-    return [];
-  }
+  const parsed = parseJsonResponse<{ cards: GeneratedFlashcard[] }>(raw);
+  return parsed?.cards ?? [];
 }
