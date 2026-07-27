@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,10 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-const EXAM_BOARDS = ["AQA", "OCR", "Edexcel"] as const;
+const EXAM_BOARDS = ["AQA", "OCR", "Edexcel", "WJEC"] as const;
 
 export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get("ref");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +42,11 @@ export default function SignupPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-        data: { full_name: fullName, exam_board: examBoard },
+        data: {
+          full_name: fullName,
+          exam_board: examBoard,
+          ...(refCode ? { ref_code: refCode } : {}),
+        },
       },
     });
 
@@ -58,6 +72,8 @@ export default function SignupPage() {
         return;
       }
 
+      await fetch("/api/referral/claim", { method: "POST" }).catch(() => {});
+
       router.push("/dashboard");
       router.refresh();
       return;
@@ -73,7 +89,9 @@ export default function SignupPage() {
         Create your account
       </h1>
       <p className="mt-2 text-muted-foreground">
-        Free to start. Your first session is a couple of minutes away.
+        {refCode
+          ? "Free to start — and you'll get a bonus session for signing up via a friend's link."
+          : "Free to start. Your first session is a couple of minutes away."}
       </p>
 
       <Card className="mt-8 border-border/70 p-6">

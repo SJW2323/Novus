@@ -69,6 +69,7 @@ function AuthCallbackHandler() {
 
       if (ok) {
         await ensureProfileExists(supabase);
+        await fetch("/api/referral/claim", { method: "POST" }).catch(() => {});
       }
 
       router.replace(ok ? next : "/login?error=confirmation_failed");

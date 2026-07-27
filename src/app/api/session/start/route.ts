@@ -17,36 +17,57 @@ export async function POST() {
 
   const admin = createAdminClient();
 
-  const { data: subscription } = await admin
-    .from("subscriptions")
-    .select("tier, status, current_period_start")
-    .eq("student_id", user.id)
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("bonus_sessions")
+    .eq("id", user.id)
     .maybeSingle();
 
-  if (!subscription || subscription.status !== "active" || !subscription.tier) {
-    return NextResponse.json(
-      { error: "You need an active subscription to start a session.", code: "NO_SUBSCRIPTION" },
-      { status: 402 },
-    );
+  let usingBonusSession = false;
+
+  if (profile && profile.bonus_sessions > 0) {
+    const { data: consumed } = await admin
+      .from("profiles")
+      .update({ bonus_sessions: profile.bonus_sessions - 1 })
+      .eq("id", user.id)
+      .eq("bonus_sessions", profile.bonus_sessions)
+      .select("id")
+      .maybeSingle();
+    usingBonusSession = !!consumed;
   }
 
-  const tierConfig = TIERS[subscription.tier as Tier];
-
-  if (tierConfig.sessionsPerWeek !== null && subscription.current_period_start) {
-    const { count } = await admin
-      .from("sessions")
-      .select("id", { count: "exact", head: true })
+  if (!usingBonusSession) {
+    const { data: subscription } = await admin
+      .from("subscriptions")
+      .select("tier, status, current_period_start")
       .eq("student_id", user.id)
-      .gte("started_at", subscription.current_period_start);
+      .maybeSingle();
 
-    if ((count ?? 0) >= tierConfig.sessionsPerWeek) {
+    if (!subscription || subscription.status !== "active" || !subscription.tier) {
       return NextResponse.json(
-        {
-          error: `You've used all ${tierConfig.sessionsPerWeek} session${tierConfig.sessionsPerWeek === 1 ? "" : "s"} on your ${tierConfig.label} plan this week.`,
-          code: "LIMIT_REACHED",
-        },
+        { error: "You need an active subscription to start a session.", code: "NO_SUBSCRIPTION" },
         { status: 402 },
       );
+    }
+
+    const tierConfig = TIERS[subscription.tier as Tier];
+
+    if (tierConfig.sessionsPerWeek !== null && subscription.current_period_start) {
+      const { count } = await admin
+        .from("sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("student_id", user.id)
+        .gte("started_at", subscription.current_period_start);
+
+      if ((count ?? 0) >= tierConfig.sessionsPerWeek) {
+        return NextResponse.json(
+          {
+            error: `You've used all ${tierConfig.sessionsPerWeek} session${tierConfig.sessionsPerWeek === 1 ? "" : "s"} on your ${tierConfig.label} plan this week.`,
+            code: "LIMIT_REACHED",
+          },
+          { status: 402 },
+        );
+      }
     }
   }
 

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-const EXAM_BOARDS = ["AQA", "OCR", "Edexcel"] as const;
+const EXAM_BOARDS = ["AQA", "OCR", "Edexcel", "WJEC"] as const;
 const TIER_LABELS: Record<string, string> = { bronze: "Bronze", silver: "Silver", gold: "Gold" };
 
 export default function ProfilePage() {

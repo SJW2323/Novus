@@ -48,7 +48,7 @@ export default function HomePage() {
               variant="secondary"
               className="rounded-full px-3 py-1 text-xs font-medium tracking-wide uppercase"
             >
-              Live · Face-to-face · AQA · OCR · Edexcel
+              Live · Face-to-face · AQA · WJEC
             </Badge>
             <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-balance sm:text-5xl">
               The tutor who never gets tired of{" "}
@@ -113,9 +113,9 @@ export default function HomePage() {
               Full A-level Biology coverage, mapped to your exam board.
             </h2>
             <p className="text-muted-foreground text-pretty">
-              Novus tracks your mastery topic by topic against the AQA, OCR,
-              and Edexcel specifications, so revision time goes exactly where
-              you need it.
+              Novus tracks your mastery topic by topic against the AQA and
+              WJEC specifications, so revision time goes exactly where you
+              need it. OCR and Edexcel mappings are on the roadmap.
             </p>
             <Button variant="outline" render={<Link href="/subjects" />}>
               Browse the syllabus

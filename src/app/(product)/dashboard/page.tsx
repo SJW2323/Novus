@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { extractTopicName } from "@/lib/utils";
 import { TIERS, type Tier } from "@/lib/stripe";
+import { ReferralCard } from "@/components/referral-card";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -15,7 +16,11 @@ export default async function DashboardPage() {
 
   const [{ data: profile }, { data: mastery }, { data: sessions }, { data: subscription }] =
     await Promise.all([
-      supabase.from("profiles").select("full_name, exam_board").eq("id", user.id).single(),
+      supabase
+        .from("profiles")
+        .select("full_name, exam_board, bonus_sessions")
+        .eq("id", user.id)
+        .single(),
       supabase
         .from("student_topic_mastery")
         .select("mastery_level, times_covered, last_reviewed_at, syllabus_topics(topic_name)")
@@ -147,6 +152,11 @@ export default async function DashboardPage() {
           )}
         </Card>
       </div>
+
+      <ReferralCard
+        referralCode={user.id.slice(0, 8)}
+        bonusSessions={profile?.bonus_sessions ?? 0}
+      />
     </div>
   );
 }

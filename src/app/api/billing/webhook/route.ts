@@ -54,6 +54,37 @@ export async function POST(request: Request) {
     );
   }
 
+  // Rewards the referrer with a bonus session the first time their
+  // referred friend actually subscribes - tied to a checkout completing
+  // (not just signing up) so the reward can't be farmed with fake accounts.
+  async function rewardReferrerIfNeeded(studentId: string) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("referred_by, referral_reward_granted")
+      .eq("id", studentId)
+      .maybeSingle();
+
+    if (!profile?.referred_by || profile.referral_reward_granted) return;
+
+    const { data: referrer } = await admin
+      .from("profiles")
+      .select("bonus_sessions")
+      .eq("id", profile.referred_by)
+      .maybeSingle();
+
+    if (!referrer) return;
+
+    await admin
+      .from("profiles")
+      .update({ bonus_sessions: referrer.bonus_sessions + 1 })
+      .eq("id", profile.referred_by);
+
+    await admin
+      .from("profiles")
+      .update({ referral_reward_granted: true })
+      .eq("id", studentId);
+  }
+
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -62,6 +93,8 @@ export async function POST(request: Request) {
           session.subscription as string,
         );
         await syncSubscription(subscription);
+        const studentId = subscription.metadata?.studentId;
+        if (studentId) await rewardReferrerIfNeeded(studentId);
       }
       break;
     }
