@@ -26,6 +26,7 @@ async function ensureProfileExists(supabase: ReturnType<typeof createClient>) {
     id: user.id,
     full_name: user.user_metadata?.full_name ?? null,
     exam_board: user.user_metadata?.exam_board ?? "AQA",
+    referral_code: user.id.slice(0, 8),
   });
 }
 

@@ -64,6 +64,7 @@ function SignupForm() {
         id: data.user.id,
         full_name: fullName,
         exam_board: examBoard,
+        referral_code: data.user.id.slice(0, 8),
       });
 
       if (profileError) {

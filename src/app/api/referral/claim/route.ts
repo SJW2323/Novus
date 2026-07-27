@@ -38,7 +38,7 @@ export async function POST() {
   const { data: referrer } = await admin
     .from("profiles")
     .select("id")
-    .ilike("id", `${refCode}%`)
+    .eq("referral_code", refCode.toLowerCase())
     .neq("id", user.id)
     .maybeSingle();
 
