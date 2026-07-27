@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { summarizeSession, type LearningProfile } from "@/lib/claude";
+import { summarizeSession, generateFlashcards, type LearningProfile } from "@/lib/claude";
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .single();
 
-  const [{ data: messages }, { data: existingProfile }, { data: topics }] =
+  const [{ data: messages }, { data: existingProfile }, { data: topics }, { data: subscription }] =
     await Promise.all([
       supabase
         .from("session_messages")
@@ -57,6 +57,11 @@ export async function POST(request: Request) {
         .from("syllabus_topics")
         .select("id, topic_name")
         .eq("exam_board", profile?.exam_board ?? "AQA"),
+      supabase
+        .from("subscriptions")
+        .select("tier")
+        .eq("student_id", user.id)
+        .maybeSingle(),
     ]);
 
   if (!messages || messages.length === 0) {
@@ -135,6 +140,25 @@ export async function POST(request: Request) {
       },
       { onConflict: "student_id,topic_id" },
     );
+  }
+
+  if (subscription?.tier === "silver" || subscription?.tier === "gold") {
+    const cards = await generateFlashcards({
+      transcript,
+      knownTopics: (topics ?? []).map((t) => t.topic_name),
+    });
+
+    if (cards.length > 0) {
+      await admin.from("flashcards").insert(
+        cards.map((card) => ({
+          student_id: user.id,
+          session_id: sessionId,
+          topic_name: card.topicName,
+          front: card.front,
+          back: card.back,
+        })),
+      );
+    }
   }
 
   await admin.from("session_summaries").insert({

@@ -38,15 +38,22 @@ export function buildTutorSystemPrompt({
     .filter((row) => row.masteryLevel >= 0.8)
     .map((row) => row.topicName);
 
-  return `You are the voice of Novus, an AI tutor having a live spoken conversation with ${studentName}, an A-level Biology student sitting the ${examBoard} specification.
+  return `You are the voice of Novus, an AI tutor having a live spoken phone call with ${studentName}, an A-level Biology student sitting the ${examBoard} specification.
 
-You are talking, not typing. Keep replies short and natural, like a real tutor speaking out loud: usually 1-4 sentences, plain conversational language, no markdown, no bullet lists, no headers. Ask one question at a time and give the student space to think and respond.
+CONVERSATION FORMAT
+This is a live spoken conversation, not an essay or a lecture. Keep almost every reply to one or two short sentences - three at most, and only when the student explicitly asks for a fuller explanation. No markdown, no bullet lists, no headers, no numbered steps read aloud as "one, two, three." Ask one question at a time, then stop talking and let them think.
 
-Teaching style:
+REACT BEFORE YOU MOVE ON
+Never jump straight to the next question without acknowledging what the student just said. React like a person would - "right, exactly", "hmm, not quite", "okay yeah that's the idea" - and vary it; do not reuse the same acknowledgement every turn, and do not praise every single answer as "great question" or "good job." Save real enthusiasm for when it is earned.
+
+SOUND LIKE A PERSON, NOT A SCRIPT
+Use contractions always (it's, that's, you're, don't). Speak plainly, the way a sharp final-year student explaining something to a friend would, not like a textbook. Light, occasional fillers ("so", "okay", "I mean") and a short "..." pause before a tricky point are good in moderation - do not force one into every line, and never let a filler get in the way of a precise answer. Vary your sentence openers; do not start every turn with the student's name or the same stock phrase.
+
+TEACHING STYLE
 - Default to the Socratic method: ask guiding questions before giving the answer outright.
 - If the student is close but not quite right, nudge them rather than correcting immediately.
-- If they're genuinely stuck after a couple of nudges, explain clearly and concisely, then check understanding with a follow-up question.
-- Use concrete analogies for abstract mechanisms (e.g. enzyme active sites, membrane transport) when it helps.
+- If they're genuinely stuck after a couple of nudges, explain clearly and concisely in one or two sentences, then check understanding with a short follow-up question.
+- Use concrete analogies for abstract mechanisms (e.g. enzyme active sites, membrane transport) when it helps, but keep them brief - one line, not a story.
 - Keep the science precise and exam-accurate for ${examBoard} A-level Biology - don't oversimplify to the point of being wrong.
 
 ${
@@ -137,5 +144,45 @@ ${transcriptText}`,
       pacingNotes: "",
       engagementNotes: "",
     };
+  }
+}
+
+export interface GeneratedFlashcard {
+  front: string;
+  back: string;
+  topicName: string;
+}
+
+export async function generateFlashcards({
+  transcript,
+  knownTopics,
+}: {
+  transcript: { role: "user" | "assistant"; content: string }[];
+  knownTopics: string[];
+}): Promise<GeneratedFlashcard[]> {
+  const transcriptText = transcript
+    .map((m) => `${m.role === "user" ? "Student" : "Tutor"}: ${m.content}`)
+    .join("\n");
+
+  const response = await anthropic.messages.create({
+    model: TUTOR_MODEL,
+    max_tokens: 1000,
+    system: `You turn A-level Biology tutoring transcripts into revision flashcards. Respond with ONLY valid JSON, no prose, no markdown fences:
+{
+  "cards": [{ "front": string (a short question or prompt), "back": string (a concise, exam-accurate answer, 1-3 sentences), "topicName": string }]
+}
+Only generate cards for concepts actually discussed in the transcript - do not invent content that was not covered. Produce 3-8 cards depending on how much ground the session covered. Keep answers precise and exam-accurate for A-level Biology.
+Known syllabus topics you can reference in topicName: ${knownTopics.join(", ")}.`,
+    messages: [{ role: "user", content: `Transcript:\n${transcriptText}` }],
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
+
+  try {
+    const parsed = JSON.parse(raw) as { cards: GeneratedFlashcard[] };
+    return parsed.cards ?? [];
+  } catch {
+    return [];
   }
 }
