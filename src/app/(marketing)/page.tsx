@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DnaHelix, MoleculeField } from "@/components/decorative";
+import { MitosisScroll } from "@/components/mitosis-scroll";
 
 const TUTOR_FACE_URL =
   "https://newgxnc1uqs0jnqm.public.blob.vercel-storage.com/avatars/stock/olivia.webp";
@@ -102,6 +103,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <MitosisScroll />
 
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
