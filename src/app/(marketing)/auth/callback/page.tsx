@@ -4,6 +4,31 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+// Confirmation only ever establishes a session here - the signup form's
+// direct profile insert never runs when email confirmation is required,
+// since signUp() returns no session pre-confirmation. Bootstrap the row
+// here instead, from the metadata signUp stashed on the user.
+async function ensureProfileExists(supabase: ReturnType<typeof createClient>) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing) return;
+
+  await supabase.from("profiles").insert({
+    id: user.id,
+    full_name: user.user_metadata?.full_name ?? null,
+    exam_board: user.user_metadata?.exam_board ?? "AQA",
+  });
+}
+
 export default function AuthCallbackPage() {
   return (
     <Suspense>
@@ -40,6 +65,10 @@ function AuthCallbackHandler() {
       } else {
         const { data } = await supabase.auth.getSession();
         ok = !!data.session;
+      }
+
+      if (ok) {
+        await ensureProfileExists(supabase);
       }
 
       router.replace(ok ? next : "/login?error=confirmation_failed");

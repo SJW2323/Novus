@@ -32,6 +32,7 @@ export default function SignupPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        data: { full_name: fullName, exam_board: examBoard },
       },
     });
 
