@@ -32,7 +32,7 @@ export function ProductNav() {
           <Logo />
         </Link>
 
-        <nav className="flex items-center gap-6 text-sm">
+        <nav className="hidden items-center gap-6 text-sm md:flex">
           {LINKS.map((link) => (
             <Link
               key={link.href}
