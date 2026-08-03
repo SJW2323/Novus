@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const BOILERPLATE =
   "Novus is a live, face-to-face AI tutor for A-level Biology. Instead of typing into a chatbot, students talk to Novus on a call, mapped exactly to their exam board's specification (AQA, WJEC, with OCR and Edexcel on the roadmap), and it remembers what was covered and how each student learns from one session to the next. Novus was founded by two Biology students who kept running into the same problem while tutoring others: almost every resource is written for \"A-level Biology\" in the abstract, not for the exam board actually in front of a student.";
@@ -35,6 +36,10 @@ export default function PressPage() {
         Everything you need to write about, link to, or design around Novus —
         boilerplate copy, logo files, brand colours, and product screenshots.
       </p>
+
+      <Button size="lg" className="mt-6" render={<a href="/novus-press-kit.zip" download />}>
+        Download everything (.zip)
+      </Button>
 
       <section className="mt-14">
         <h2 className="font-heading text-2xl font-semibold">Boilerplate</h2>
