@@ -15,6 +15,9 @@ export function SiteFooter() {
           <Link href="/about" className="hover:text-foreground">
             Our story
           </Link>
+          <Link href="/press" className="hover:text-foreground">
+            Press kit
+          </Link>
           <Link href="/how-it-works" className="hover:text-foreground">
             How it works
           </Link>
