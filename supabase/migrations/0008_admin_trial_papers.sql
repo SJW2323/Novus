@@ -1,7 +1,10 @@
 -- Admin back office, free-trial tracking, and tailored past papers.
+-- Written to be safely re-runnable in case an earlier attempt partially
+-- applied (hence the "if not exists" / "or replace" / drop-then-create
+-- guards throughout).
 
-alter table profiles add column is_admin boolean not null default false;
-alter table profiles add column trial_used boolean not null default false;
+alter table profiles add column if not exists is_admin boolean not null default false;
+alter table profiles add column if not exists trial_used boolean not null default false;
 
 -- Server-managed fields on profiles (admin flag, trial state, referral
 -- bookkeeping) must only ever change via our service-role routes, never
@@ -24,6 +27,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
+drop trigger if exists protect_profile_admin_fields_trigger on profiles;
 create trigger protect_profile_admin_fields_trigger
 before update on profiles
 for each row execute function protect_profile_admin_fields();
@@ -31,7 +35,7 @@ for each row execute function protect_profile_admin_fields();
 -- Simple key/value store for admin-editable marketing copy. Publicly
 -- readable (the marketing pages render it), writable only through our
 -- admin API routes (service role, after checking profiles.is_admin).
-create table site_content (
+create table if not exists site_content (
   key text primary key,
   value text not null,
   updated_at timestamptz not null default now()
@@ -39,11 +43,12 @@ create table site_content (
 
 alter table site_content enable row level security;
 
+drop policy if exists "site_content_select_all" on site_content;
 create policy "site_content_select_all" on site_content
   for select using (true);
 
 -- Tailored past papers, generated on demand for Gold students.
-create table past_papers (
+create table if not exists past_papers (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references profiles (id) on delete cascade,
   exam_board text not null,
@@ -53,7 +58,8 @@ create table past_papers (
 
 alter table past_papers enable row level security;
 
+drop policy if exists "past_papers_select_own" on past_papers;
 create policy "past_papers_select_own" on past_papers
   for select using (auth.uid() = student_id);
 
-create index past_papers_student_id_idx on past_papers (student_id);
+create index if not exists past_papers_student_id_idx on past_papers (student_id);
