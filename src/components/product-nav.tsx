@@ -11,10 +11,11 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/tutor", label: "Talk to Novus" },
   { href: "/flashcards", label: "Flashcards" },
+  { href: "/past-papers", label: "Past papers" },
   { href: "/profile", label: "Profile" },
 ];
 
-export function ProductNav() {
+export function ProductNav({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -45,6 +46,11 @@ export function ProductNav() {
               {link.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link href="/admin" className="text-muted-foreground transition-colors hover:text-foreground">
+              Admin
+            </Link>
+          )}
         </nav>
 
         <Button variant="ghost" size="sm" onClick={handleLogout}>

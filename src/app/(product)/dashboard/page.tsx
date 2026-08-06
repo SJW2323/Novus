@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("full_name, exam_board, bonus_sessions")
+        .select("full_name, exam_board, bonus_sessions, trial_used")
         .eq("id", user.id)
         .single(),
       supabase
@@ -78,13 +78,19 @@ export default async function DashboardPage() {
             ? "unlimited sessions this week"
             : `${sessionsThisPeriod} of ${tierConfig.sessionsPerWeek} session${tierConfig.sessionsPerWeek === 1 ? "" : "s"} used this week`}
         </p>
+      ) : profile?.trial_used ? (
+        <p className="mt-6 text-sm text-muted-foreground">
+          You&apos;ve used your free trial —{" "}
+          <Link href="/pricing" className="font-medium text-foreground underline">
+            choose a plan
+          </Link>{" "}
+          to keep talking to Novus.
+        </p>
       ) : (
         <p className="mt-6 text-sm text-muted-foreground">
-          You don&apos;t have an active plan yet —{" "}
-          <Link href="/pricing" className="font-medium text-foreground underline">
-            choose one
-          </Link>{" "}
-          to start a session.
+          You have a free 2-minute trial session ready to use — hit{" "}
+          <span className="font-medium text-foreground">Start a session</span>{" "}
+          to try Novus, no card required.
         </p>
       )}
 

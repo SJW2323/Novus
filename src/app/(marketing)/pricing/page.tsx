@@ -1,12 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { PricingCards } from "@/components/pricing-cards";
 import type { Tier } from "@/lib/stripe";
+import { getSiteContent } from "@/lib/site-content";
 
 export default async function PricingPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const content = await getSiteContent(supabase);
+  const blurbs: Partial<Record<Tier, string>> = {
+    bronze: content.pricing_bronze_blurb,
+    silver: content.pricing_silver_blurb,
+    gold: content.pricing_gold_blurb,
+  };
 
   let currentTier: Tier | null = null;
   if (user) {
@@ -33,7 +40,7 @@ export default async function PricingPage() {
       </div>
 
       <div className="mt-12">
-        <PricingCards isLoggedIn={!!user} currentTier={currentTier} />
+        <PricingCards isLoggedIn={!!user} currentTier={currentTier} blurbs={blurbs} />
       </div>
     </div>
   );

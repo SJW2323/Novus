@@ -35,9 +35,11 @@ const TIER_COPY: Record<
 export function PricingCards({
   isLoggedIn,
   currentTier,
+  blurbs,
 }: {
   isLoggedIn: boolean;
   currentTier: Tier | null;
+  blurbs?: Partial<Record<Tier, string>>;
 }) {
   const router = useRouter();
   const [loadingTier, setLoadingTier] = useState<Tier | null>(null);
@@ -78,7 +80,9 @@ export function PricingCards({
             )}
           >
             <h2 className="font-heading text-xl font-semibold">{copy.label}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{copy.blurb}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {blurbs?.[tier] ?? copy.blurb}
+            </p>
             <p className="mt-6 text-3xl font-semibold">
               £{copy.price}
               <span className="text-base font-normal text-muted-foreground">

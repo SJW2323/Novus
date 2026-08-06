@@ -14,7 +14,7 @@ import { Mic, MicOff, PhoneOff } from "lucide-react";
 
 const VIDEO_ELEMENT_ID = "novus-avatar-video";
 
-type CallStatus = "idle" | "connecting" | "live" | "ended" | "error";
+type CallStatus = "idle" | "connecting" | "live" | "ended" | "error" | "trial-ended";
 
 interface TranscriptLine {
   id: string;
@@ -29,13 +29,24 @@ export default function TutorPage() {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [needsSubscription, setNeedsSubscription] = useState(false);
+  const [trialSecondsLeft, setTrialSecondsLeft] = useState<number | null>(null);
 
   const clientRef = useRef<AnamClient | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const startedRef = useRef(false);
+  const trialTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trialIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearTrialTimers = useCallback(() => {
+    if (trialTimeoutRef.current) clearTimeout(trialTimeoutRef.current);
+    if (trialIntervalRef.current) clearInterval(trialIntervalRef.current);
+    trialTimeoutRef.current = null;
+    trialIntervalRef.current = null;
+  }, []);
 
   const endCall = useCallback(
-    async (redirect: boolean) => {
+    async (redirect: boolean, finalStatus: CallStatus = "ended") => {
+      clearTrialTimers();
       const client = clientRef.current;
       clientRef.current = null;
       if (client) {
@@ -55,10 +66,10 @@ export default function TutorPage() {
         }).catch(() => {});
       }
 
-      setStatus("ended");
+      setStatus(finalStatus);
       if (redirect) router.push("/dashboard");
     },
-    [router],
+    [router, clearTrialTimers],
   );
 
   useEffect(() => {
@@ -76,19 +87,32 @@ export default function TutorPage() {
           }
           throw new Error(body.error ?? "Failed to start session");
         }
-        const { sessionToken, sessionId } = (await res.json()) as {
+        const { sessionToken, sessionId, isTrial, trialSeconds } = (await res.json()) as {
           sessionToken: string;
           sessionId: string;
+          isTrial?: boolean;
+          trialSeconds?: number;
         };
         sessionIdRef.current = sessionId;
 
         const client = createAnamClient(sessionToken);
         clientRef.current = client;
 
-        client.addListener(AnamEvent.SESSION_READY, () => setStatus("live"));
+        client.addListener(AnamEvent.SESSION_READY, () => {
+          setStatus("live");
+          if (isTrial && trialSeconds) {
+            setTrialSecondsLeft(trialSeconds);
+            trialIntervalRef.current = setInterval(() => {
+              setTrialSecondsLeft((s) => (s !== null ? Math.max(0, s - 1) : s));
+            }, 1000);
+            trialTimeoutRef.current = setTimeout(() => {
+              endCall(false, "trial-ended");
+            }, trialSeconds * 1000);
+          }
+        });
 
         client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
-          setStatus((s) => (s === "ended" ? s : "ended"));
+          setStatus((s) => (s === "ended" || s === "trial-ended" ? s : "ended"));
         });
 
         client.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (event) => {
@@ -137,11 +161,12 @@ export default function TutorPage() {
     start();
 
     return () => {
+      clearTrialTimers();
       if (clientRef.current) {
         clientRef.current.stopStreaming().catch(() => {});
       }
     };
-  }, []);
+  }, [endCall, clearTrialTimers]);
 
   function toggleMute() {
     const client = clientRef.current;
@@ -155,6 +180,11 @@ export default function TutorPage() {
     }
   }
 
+  const statusLabel =
+    trialSecondsLeft !== null && status === "live"
+      ? `Live with Novus · trial: ${Math.floor(trialSecondsLeft / 60)}:${String(trialSecondsLeft % 60).padStart(2, "0")}`
+      : undefined;
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
       <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-card shadow-lg">
@@ -164,15 +194,16 @@ export default function TutorPage() {
               className={`size-2 rounded-full ${
                 status === "live"
                   ? "bg-primary"
-                  : status === "error"
+                  : status === "error" || status === "trial-ended"
                     ? "bg-destructive"
                     : "bg-muted-foreground"
               }`}
             />
             <span className="text-muted-foreground">
               {status === "connecting" && "Connecting…"}
-              {status === "live" && "Live with Novus"}
+              {status === "live" && (statusLabel ?? "Live with Novus")}
               {status === "ended" && "Call ended"}
+              {status === "trial-ended" && "Trial ended"}
               {status === "error" && "Couldn't connect"}
               {status === "idle" && "Starting…"}
             </span>
@@ -186,7 +217,7 @@ export default function TutorPage() {
             playsInline
             className="h-full w-full object-cover"
           />
-          {status !== "live" && status !== "error" && (
+          {status !== "live" && status !== "error" && status !== "trial-ended" && (
             <div className="absolute inset-0 flex items-center justify-center bg-secondary/60 text-muted-foreground">
               Connecting to your tutor…
             </div>
@@ -199,6 +230,18 @@ export default function TutorPage() {
                   View plans
                 </Button>
               )}
+            </div>
+          )}
+          {status === "trial-ended" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/60 px-6 text-center">
+              <p className="font-heading text-xl font-semibold">
+                Your free trial has ended
+              </p>
+              <p className="max-w-xs text-sm text-muted-foreground">
+                That was your one free 2-minute session. Subscribe to keep
+                talking to Novus whenever you&apos;re stuck.
+              </p>
+              <Button render={<Link href="/pricing" />}>View plans</Button>
             </div>
           )}
         </div>
@@ -217,7 +260,7 @@ export default function TutorPage() {
             variant="destructive"
             size="icon"
             onClick={() => endCall(true)}
-            disabled={status === "ended"}
+            disabled={status === "ended" || status === "trial-ended"}
             aria-label="End call"
           >
             <PhoneOff className="size-4" />

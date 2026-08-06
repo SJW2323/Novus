@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DnaHelix, MoleculeField } from "@/components/decorative";
 import { MitosisScroll } from "@/components/mitosis-scroll";
+import { createClient } from "@/lib/supabase/server";
+import { getSiteContent } from "@/lib/site-content";
 
 const TUTOR_FACE_URL =
   "https://newgxnc1uqs0jnqm.public.blob.vercel-storage.com/avatars/stock/olivia.webp";
@@ -35,7 +37,10 @@ const SYLLABUS_UNITS = [
   "Genetics, populations & ecosystems",
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const content = await getSiteContent(supabase);
+
   return (
     <>
       <section className="bg-hero-glow relative overflow-hidden">
@@ -57,9 +62,7 @@ export default function HomePage() {
               </span>
             </h1>
             <p className="max-w-md text-lg text-muted-foreground text-pretty">
-              Novus is a face you talk to, not a chatbot you type at. Every
-              conversation feels like a live one-on-one lesson — one that
-              remembers exactly where you left off, whenever you&rsquo;re stuck.
+              {content.hero_subheadline}
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <Button size="lg" render={<Link href="/signup" />}>

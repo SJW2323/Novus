@@ -211,3 +211,43 @@ Known syllabus topics you can reference in topicName: ${knownTopics.join(", ")}.
   const parsed = parseJsonResponse<{ cards: GeneratedFlashcard[] }>(raw, "generateFlashcards");
   return parsed?.cards ?? [];
 }
+
+export interface PastPaperQuestion {
+  questionText: string;
+  marks: number;
+  topicName: string;
+  modelAnswer: string;
+}
+
+export async function generatePastPaper({
+  examBoard,
+  weakTopics,
+  strongTopics,
+}: {
+  examBoard: string;
+  weakTopics: string[];
+  strongTopics: string[];
+}): Promise<PastPaperQuestion[]> {
+  const response = await anthropic.messages.create({
+    model: TUTOR_MODEL,
+    max_tokens: 2000,
+    system: `You write exam-style A-level Biology past paper questions for the ${examBoard} specification. Respond with ONLY valid JSON, no prose, no markdown fences:
+{
+  "questions": [{ "questionText": string, "marks": number (1-6, matching typical ${examBoard} mark allocations), "topicName": string, "modelAnswer": string (a concise mark-scheme-style model answer, using bullet-style points separated by newlines where appropriate) }]
+}
+Write 6-8 questions, mostly short-structured (2-4 marks) with one or two longer extended-response questions (5-6 marks). Weight questions toward the student's weaker topics, but include a couple from their stronger topics too so it reads like a real mixed paper. Keep questions exam-accurate for ${examBoard} A-level Biology - correct terminology, realistic phrasing, no invented content.`,
+    messages: [
+      {
+        role: "user",
+        content: `Topics the student finds difficult (weight the paper toward these): ${weakTopics.join(", ") || "none tracked yet - use core topics across the specification"}.
+Topics the student is strong in (include a couple): ${strongTopics.join(", ") || "none tracked yet"}.`,
+      },
+    ],
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
+
+  const parsed = parseJsonResponse<{ questions: PastPaperQuestion[] }>(raw, "generatePastPaper");
+  return parsed?.questions ?? [];
+}
