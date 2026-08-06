@@ -114,10 +114,8 @@ export async function POST() {
     .single();
 
   if (sessionError || !session) {
-    return NextResponse.json(
-      { error: sessionError?.message ?? "Failed to create session" },
-      { status: 500 },
-    );
+    console.error("[session/start] failed to create session row:", sessionError?.message);
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }
 
   try {
@@ -130,9 +128,7 @@ export async function POST() {
     });
   } catch (err) {
     await admin.from("sessions").update({ status: "error" }).eq("id", session.id);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to start Anam session" },
-      { status: 502 },
-    );
+    console.error("[session/start] Anam session token request failed:", err);
+    return NextResponse.json({ error: "Failed to start session" }, { status: 502 });
   }
 }

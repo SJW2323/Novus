@@ -19,6 +19,22 @@ export async function PATCH(
     isAdmin?: boolean;
   };
 
+  const VALID_TIERS = new Set(["bronze", "silver", "gold"]);
+  const VALID_STATUSES = new Set(["active", "canceled"]);
+
+  if (body.tier !== undefined && body.tier !== null && !VALID_TIERS.has(body.tier)) {
+    return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
+  }
+  if (body.status !== undefined && body.status !== null && !VALID_STATUSES.has(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+  if (body.bonusSessionsDelta !== undefined && !Number.isInteger(body.bonusSessionsDelta)) {
+    return NextResponse.json({ error: "Invalid bonusSessionsDelta" }, { status: 400 });
+  }
+  if (body.isAdmin !== undefined && typeof body.isAdmin !== "boolean") {
+    return NextResponse.json({ error: "Invalid isAdmin" }, { status: 400 });
+  }
+
   const db = createAdminClient();
 
   if (body.tier !== undefined || body.status !== undefined) {

@@ -4,6 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSystemPromptForStudent } from "@/lib/tutor-context";
 import { getTutorReply } from "@/lib/claude";
 
+// Sessions aren't otherwise time-boxed once started (only the free trial has
+// a clock), so this is what stops a single session from becoming an
+// unbounded number of paid Claude API calls if a script hammers this route
+// directly instead of going through the actual call UI.
+const MAX_TURNS_PER_SESSION = 60;
+
 export async function POST(request: Request) {
   const { sessionId, studentUtterance } = (await request.json()) as {
     sessionId?: string;
@@ -31,6 +37,19 @@ export async function POST(request: Request) {
 
   if (!session || session.student_id !== user.id) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  const { count: turnCount } = await supabase
+    .from("session_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", sessionId)
+    .eq("role", "student");
+
+  if ((turnCount ?? 0) >= MAX_TURNS_PER_SESSION) {
+    return NextResponse.json(
+      { error: "This session has reached its length limit. Start a new session to keep going." },
+      { status: 429 },
+    );
   }
 
   const { data: priorMessages } = await supabase

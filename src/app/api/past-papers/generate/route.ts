@@ -58,10 +58,8 @@ export async function POST() {
     .single();
 
   if (error || !paper) {
-    return NextResponse.json(
-      { error: error?.message ?? "Failed to save paper" },
-      { status: 500 },
-    );
+    console.error("[past-papers/generate] failed to save paper:", error?.message);
+    return NextResponse.json({ error: "Failed to save paper" }, { status: 500 });
   }
 
   return NextResponse.json({ paper });

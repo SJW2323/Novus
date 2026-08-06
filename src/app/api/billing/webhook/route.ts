@@ -66,6 +66,20 @@ export async function POST(request: Request) {
 
     if (!profile?.referred_by || profile.referral_reward_granted) return;
 
+    // Stripe can redeliver the same event (retries, timeouts), so the grant
+    // itself has to be the atomic gate - claim it with a conditional update
+    // before touching the referrer's balance, or two concurrent deliveries
+    // could both pass the check above and double-grant the bonus session.
+    const { data: claimed } = await admin
+      .from("profiles")
+      .update({ referral_reward_granted: true })
+      .eq("id", studentId)
+      .eq("referral_reward_granted", false)
+      .select("id")
+      .maybeSingle();
+
+    if (!claimed) return;
+
     const { data: referrer } = await admin
       .from("profiles")
       .select("bonus_sessions")
@@ -78,11 +92,6 @@ export async function POST(request: Request) {
       .from("profiles")
       .update({ bonus_sessions: referrer.bonus_sessions + 1 })
       .eq("id", profile.referred_by);
-
-    await admin
-      .from("profiles")
-      .update({ referral_reward_granted: true })
-      .eq("id", studentId);
   }
 
   switch (event.type) {
