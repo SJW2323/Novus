@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Home } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 
 const LINKS = [
@@ -36,12 +37,18 @@ export default async function AdminLayout({
               ))}
             </nav>
           </div>
-          <Link
-            href="/dashboard"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Back to app
-          </Link>
+          <div className="flex items-center gap-5 text-sm text-muted-foreground">
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 hover:text-foreground"
+            >
+              <Home className="size-4" />
+              View site
+            </Link>
+            <Link href="/dashboard" className="hover:text-foreground">
+              Back to app
+            </Link>
+          </div>
         </div>
       </header>
       <main className="flex-1 bg-secondary/20">{children}</main>
