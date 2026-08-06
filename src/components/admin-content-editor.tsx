@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 export function AdminContentEditor({
   fields,
 }: {
-  fields: { key: string; label: string; value: string }[];
+  fields: { key: string; label: string; value: string; type?: string }[];
 }) {
   const [values, setValues] = useState(
     Object.fromEntries(fields.map((f) => [f.key, f.value])),
@@ -36,15 +36,37 @@ export function AdminContentEditor({
       {fields.map((field) => (
         <Card key={field.key} className="border-border/70 p-6">
           <Label htmlFor={field.key}>{field.label}</Label>
-          <textarea
-            id={field.key}
-            value={values[field.key]}
-            onChange={(e) =>
-              setValues((v) => ({ ...v, [field.key]: e.target.value }))
-            }
-            rows={field.key.includes("body") ? 8 : 3}
-            className="mt-2 w-full rounded-md border border-border bg-transparent p-3 text-sm"
-          />
+          {field.type === "color" ? (
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                id={field.key}
+                type="color"
+                value={values[field.key]}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, [field.key]: e.target.value }))
+                }
+                className="h-10 w-16 cursor-pointer rounded-md border border-border bg-transparent p-1"
+              />
+              <input
+                type="text"
+                value={values[field.key]}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, [field.key]: e.target.value }))
+                }
+                className="w-32 rounded-md border border-border bg-transparent p-2 text-sm"
+              />
+            </div>
+          ) : (
+            <textarea
+              id={field.key}
+              value={values[field.key]}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, [field.key]: e.target.value }))
+              }
+              rows={field.key.includes("body") ? 8 : 3}
+              className="mt-2 w-full rounded-md border border-border bg-transparent p-3 text-sm"
+            />
+          )}
           <div className="mt-3 flex items-center gap-3">
             <Button
               size="sm"

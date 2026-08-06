@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONTENT_FIELDS } from "@/lib/site-content";
+import { CONTENT_FIELDS, THEME_FIELDS } from "@/lib/site-content";
 
-const VALID_KEYS = new Set(CONTENT_FIELDS.map((f) => f.key));
+const VALID_KEYS = new Set([
+  ...CONTENT_FIELDS.map((f) => f.key),
+  ...THEME_FIELDS.map((f) => f.key),
+]);
 
 export async function POST(request: Request) {
   const admin = await requireAdmin();

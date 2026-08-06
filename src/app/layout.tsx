@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { createClient } from "@/lib/supabase/server";
+import { getSiteTheme, themeToCssVars } from "@/lib/site-content";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,16 +44,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const theme = await getSiteTheme(supabase);
+
   return (
     <html
       lang="en"
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} dark h-full antialiased`}
+      style={themeToCssVars(theme)}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
