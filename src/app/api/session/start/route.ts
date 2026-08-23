@@ -109,7 +109,7 @@ export async function POST() {
 
   const { data: session, error: sessionError } = await admin
     .from("sessions")
-    .insert({ student_id: user.id, status: "active" })
+    .insert({ student_id: user.id, status: "active", system_prompt: systemPrompt })
     .select("id")
     .single();
 

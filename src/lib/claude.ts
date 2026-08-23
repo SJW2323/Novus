@@ -99,22 +99,26 @@ ${strongTopics.length > 0 ? `Topics they've shown strong mastery in: ${strongTop
 Start the conversation by greeting ${studentName} warmly and briefly, then either continue what you last worked on together or ask what they want to focus on today.`;
 }
 
-export async function getTutorReply({
+// Streaming variant for the live call: lets the caller push text deltas to
+// the avatar's speech as they arrive instead of waiting for the whole reply,
+// which is what actually makes the conversation feel live. The system prompt
+// is marked as an ephemeral cache breakpoint - it's identical on every turn
+// within a session (computed once at session/start), so after the first
+// turn, Claude skips re-processing it entirely instead of paying full input
+// latency/cost for the same block on every message.
+export function streamTutorReply({
   systemPrompt,
   history,
 }: {
   systemPrompt: string;
   history: { role: "user" | "assistant"; content: string }[];
-}): Promise<string> {
-  const response = await anthropic.messages.create({
+}) {
+  return anthropic.messages.stream({
     model: TUTOR_MODEL,
     max_tokens: 400,
-    system: systemPrompt,
+    system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
     messages: history.length > 0 ? history : [{ role: "user", content: "(the student has just joined the call)" }],
   });
-
-  const textBlock = response.content.find((block) => block.type === "text");
-  return textBlock && textBlock.type === "text" ? textBlock.text : "";
 }
 
 export interface SessionSummaryResult {

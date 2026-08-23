@@ -145,13 +145,32 @@ export default function TutorPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId, studentUtterance }),
         });
-        const { reply } = (await res.json()) as { reply: string };
-        if (reply) {
+
+        if (!res.ok || !res.body) return;
+
+        // Stream text straight into the avatar's speech as it arrives from
+        // Claude, instead of waiting for the whole reply - this is what
+        // actually makes the call feel live rather than laggy.
+        const talkStream = client.createTalkMessageStream();
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullReply = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          if (!chunk) continue;
+          fullReply += chunk;
+          await talkStream.streamMessageChunk(chunk, false);
+        }
+        await talkStream.endMessage();
+
+        if (fullReply) {
           setTranscript((prev) => [
             ...prev,
-            { id: `${Date.now()}`, role: "tutor", content: reply },
+            { id: `${Date.now()}`, role: "tutor", content: fullReply },
           ]);
-          await client.talk(reply);
         }
       } catch {
         // a dropped turn shouldn't kill the call - the student can just keep talking
