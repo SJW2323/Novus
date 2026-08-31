@@ -121,6 +121,48 @@ export function streamTutorReply({
   });
 }
 
+export interface TutorSlideResult {
+  heading: string;
+  bullets: string[];
+  diagram: "mitosis" | null;
+  diagramProgress: number;
+}
+
+// Cheap/fast model - this only classifies one already-generated reply into a
+// short visual aid, it doesn't need Sonnet's tutoring quality, and speed
+// matters here since the slide should appear close behind the spoken reply.
+const SLIDE_MODEL = "claude-haiku-4-5-20251001";
+
+export async function generateTutorSlide({
+  studentUtterance,
+  tutorReply,
+}: {
+  studentUtterance: string;
+  tutorReply: string;
+}): Promise<TutorSlideResult | null> {
+  const response = await anthropic.messages.create({
+    model: SLIDE_MODEL,
+    max_tokens: 300,
+    system: `You generate a short visual aid slide to accompany one turn of a live spoken A-level Biology tutoring conversation. Respond with ONLY valid JSON, no prose, no markdown fences:
+{
+  "heading": string (a short 2-6 word title for what's currently being explained),
+  "bullets": string[] (2-4 very short bullet points or key terms/definitions from what the tutor just said - a few words each, not full sentences),
+  "diagram": "mitosis" | null (set to "mitosis" only if the reply is specifically about the stages of mitosis - interphase, prophase, metaphase, anaphase, telophase - otherwise null),
+  "diagramProgress": number between 0 and 1 (only meaningful when diagram is "mitosis": interphase ~0.05, prophase ~0.25, metaphase ~0.45, anaphase ~0.65, telophase ~0.9; otherwise 0)
+}`,
+    messages: [
+      {
+        role: "user",
+        content: `Student said: ${studentUtterance}\nTutor just replied: ${tutorReply}`,
+      },
+    ],
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  const raw = textBlock && textBlock.type === "text" ? textBlock.text : "{}";
+  return parseJsonResponse<TutorSlideResult>(raw, "generateTutorSlide");
+}
+
 export interface SessionSummaryResult {
   summary: string;
   topicsCovered: { topicName: string; masteryDelta: number }[];

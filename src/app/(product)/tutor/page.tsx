@@ -11,6 +11,7 @@ import {
 } from "@anam-ai/js-sdk";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
+import { TutorSlidePanel, type TutorSlide } from "@/components/tutor-slide-panel";
 
 const VIDEO_ELEMENT_ID = "novus-avatar-video";
 
@@ -30,6 +31,7 @@ export default function TutorPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [needsSubscription, setNeedsSubscription] = useState(false);
   const [trialSecondsLeft, setTrialSecondsLeft] = useState<number | null>(null);
+  const [slide, setSlide] = useState<TutorSlide | null>(null);
 
   const clientRef = useRef<AnamClient | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -134,6 +136,25 @@ export default function TutorPage() {
       }
     }
 
+    async function fetchSlide(
+      sessionId: string,
+      studentUtterance: string,
+      tutorReply: string,
+    ) {
+      try {
+        const res = await fetch("/api/tutor/slide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, studentUtterance, tutorReply }),
+        });
+        if (!res.ok) return;
+        const { slide } = (await res.json()) as { slide: TutorSlide };
+        setSlide(slide);
+      } catch {
+        // the slide is a supplementary visual aid - failing silently is fine
+      }
+    }
+
     async function handleStudentUtterance(
       client: AnamClient,
       sessionId: string,
@@ -171,6 +192,9 @@ export default function TutorPage() {
             ...prev,
             { id: `${Date.now()}`, role: "tutor", content: fullReply },
           ]);
+          // Don't block the call on this - the slide can lag a beat behind
+          // speech, it's a supplementary visual aid, not the conversation.
+          fetchSlide(sessionId, studentUtterance, fullReply);
         }
       } catch {
         // a dropped turn shouldn't kill the call - the student can just keep talking
@@ -205,7 +229,8 @@ export default function TutorPage() {
       : undefined;
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1 space-y-4">
       <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
           <div className="flex items-center gap-2 text-sm">
@@ -297,6 +322,13 @@ export default function TutorPage() {
               <span className="text-muted-foreground">{line.content}</span>
             </p>
           ))}
+        </div>
+      )}
+      </div>
+
+      {slide && (
+        <div className="w-full shrink-0 lg:sticky lg:top-8 lg:w-80">
+          <TutorSlidePanel slide={slide} />
         </div>
       )}
     </div>

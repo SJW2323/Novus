@@ -6,6 +6,7 @@ import {
   useMotionValueEvent,
   useScroll,
   useTransform,
+  type MotionValue,
 } from "framer-motion";
 
 // Four chromosome pairs, each with a fixed column position at the
@@ -126,16 +127,14 @@ function chromatidTransform(
   return { x, y, rotate, opacity, scale };
 }
 
-export function MitosisScroll() {
-  const containerRef = useRef<HTMLDivElement>(null);
+// The SVG diagram itself, parameterized by a progress value in [0, 1]. Takes
+// any MotionValue<number> - a scroll-linked one (below, for the marketing
+// page) or a spring animated toward a target (for the conversation-driven
+// version shown next to the tutor avatar) both work identically here.
+export function MitosisDiagram({ progress }: { progress: MotionValue<number> }) {
   const chromatidRefs = useRef<(SVGGElement | null)[]>([]);
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
-
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+  useMotionValueEvent(progress, "change", (latest) => {
     const t = clamp01(latest);
     let i = 0;
     for (let pairIndex = 0; pairIndex < PAIRS.length; pairIndex++) {
@@ -157,17 +156,107 @@ export function MitosisScroll() {
     }
   });
 
-  const nucleusOpacity = useTransform(scrollYProgress, [0, 0.13, 0.3], [1, 1, 0]);
+  const nucleusOpacity = useTransform(progress, [0, 0.13, 0.3], [1, 1, 0]);
   const spindleOpacity = useTransform(
-    scrollYProgress,
+    progress,
     [0, 0.34, 0.42, 0.75, 0.85, 1],
     [0, 0, 1, 1, 0, 0],
   );
-  const membraneOpacity = useTransform(scrollYProgress, [0.78, 0.9], [1, 0]);
-  const daughterOpacity = useTransform(scrollYProgress, [0.78, 0.9], [0, 1]);
-  const daughterSpread = useTransform(scrollYProgress, [0.78, 1], [0, 1]);
+  const membraneOpacity = useTransform(progress, [0.78, 0.9], [1, 0]);
+  const daughterOpacity = useTransform(progress, [0.78, 0.9], [0, 1]);
+  const daughterSpread = useTransform(progress, [0.78, 1], [0, 1]);
   const topDaughterY = useTransform(daughterSpread, (v) => -18 * v);
   const bottomDaughterY = useTransform(daughterSpread, (v) => 18 * v);
+
+  return (
+    <svg viewBox="0 0 300 340" className="mx-auto w-full max-w-sm" aria-hidden>
+      <motion.circle
+        cx={150}
+        cy={170}
+        r={100}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth={2}
+        style={{ opacity: membraneOpacity }}
+      />
+      <motion.circle
+        cx={150}
+        cy={170}
+        r={62}
+        fill="color-mix(in oklch, var(--glow-blue), transparent 88%)"
+        stroke="var(--glow-blue)"
+        strokeOpacity={0.4}
+        strokeWidth={1.5}
+        style={{ opacity: nucleusOpacity }}
+      />
+
+      <motion.g style={{ opacity: daughterOpacity, y: topDaughterY }}>
+        <circle
+          cx={150}
+          cy={78}
+          r={58}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth={2}
+        />
+      </motion.g>
+      <motion.g style={{ opacity: daughterOpacity, y: bottomDaughterY }}>
+        <circle
+          cx={150}
+          cy={262}
+          r={58}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth={2}
+        />
+      </motion.g>
+
+      <motion.g style={{ opacity: spindleOpacity }} strokeWidth={1}>
+        {PAIRS.map((pair, i) => (
+          <g key={i}>
+            <line
+              x1={150}
+              y1={78}
+              x2={pair.column}
+              y2={170}
+              stroke="var(--muted-foreground)"
+              strokeOpacity={0.5}
+            />
+            <line
+              x1={150}
+              y1={262}
+              x2={pair.column}
+              y2={170}
+              stroke="var(--muted-foreground)"
+              strokeOpacity={0.5}
+            />
+          </g>
+        ))}
+      </motion.g>
+
+      {PAIRS.map((pair, pairIndex) =>
+        (["A", "B"] as const).map((side) => (
+          <g
+            key={`${pairIndex}-${side}`}
+            ref={(el) => {
+              chromatidRefs.current[pairIndex * 2 + (side === "A" ? 0 : 1)] = el;
+            }}
+          >
+            <rect x={-16} y={-5} width={32} height={10} rx={5} fill={pair.color} />
+          </g>
+        )),
+      )}
+    </svg>
+  );
+}
+
+export function MitosisScroll() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  });
 
   return (
     <section ref={containerRef} className="relative h-[400vh]">
@@ -197,96 +286,7 @@ export function MitosisScroll() {
             </p>
           </div>
 
-          <svg
-            viewBox="0 0 300 340"
-            className="mx-auto w-full max-w-sm"
-            aria-hidden
-          >
-            <motion.circle
-              cx={150}
-              cy={170}
-              r={100}
-              fill="none"
-              stroke="var(--border)"
-              strokeWidth={2}
-              style={{ opacity: membraneOpacity }}
-            />
-            <motion.circle
-              cx={150}
-              cy={170}
-              r={62}
-              fill="color-mix(in oklch, var(--glow-blue), transparent 88%)"
-              stroke="var(--glow-blue)"
-              strokeOpacity={0.4}
-              strokeWidth={1.5}
-              style={{ opacity: nucleusOpacity }}
-            />
-
-            <motion.g style={{ opacity: daughterOpacity, y: topDaughterY }}>
-              <circle
-                cx={150}
-                cy={78}
-                r={58}
-                fill="none"
-                stroke="var(--border)"
-                strokeWidth={2}
-              />
-            </motion.g>
-            <motion.g style={{ opacity: daughterOpacity, y: bottomDaughterY }}>
-              <circle
-                cx={150}
-                cy={262}
-                r={58}
-                fill="none"
-                stroke="var(--border)"
-                strokeWidth={2}
-              />
-            </motion.g>
-
-            <motion.g style={{ opacity: spindleOpacity }} strokeWidth={1}>
-              {PAIRS.map((pair, i) => (
-                <g key={i}>
-                  <line
-                    x1={150}
-                    y1={78}
-                    x2={pair.column}
-                    y2={170}
-                    stroke="var(--muted-foreground)"
-                    strokeOpacity={0.5}
-                  />
-                  <line
-                    x1={150}
-                    y1={262}
-                    x2={pair.column}
-                    y2={170}
-                    stroke="var(--muted-foreground)"
-                    strokeOpacity={0.5}
-                  />
-                </g>
-              ))}
-            </motion.g>
-
-            {PAIRS.map((pair, pairIndex) =>
-              (["A", "B"] as const).map((side) => (
-                <g
-                  key={`${pairIndex}-${side}`}
-                  ref={(el) => {
-                    chromatidRefs.current[pairIndex * 2 + (side === "A" ? 0 : 1)] =
-                      el;
-                  }}
-                >
-                  <rect
-                    x={-16}
-                    y={-5}
-                    width={32}
-                    height={10}
-                    rx={5}
-                    fill={pair.color}
-                  />
-                </g>
-              )),
-            )}
-          </svg>
+          <MitosisDiagram progress={scrollYProgress} />
         </div>
       </div>
     </section>
