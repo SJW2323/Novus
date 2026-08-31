@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSiteContent } from "@/lib/site-content";
 
 const TUTOR_FACE_URL =
-  "https://newgxnc1uqs0jnqm.public.blob.vercel-storage.com/avatars/stock/olivia.webp";
+  "https://newgxnc1uqs0jnqm.public.blob.vercel-storage.com/avatar-previews/OiwW0hHlWUqKK8Wpga84WrIIP6D29A8d/one-shot_OiwW0hHlWUqKK8Wpga84WrIIP6D29A8d_one-shot1788186301452-cropped-7y64d8uyRCztV2eAylXUgrrkelGAE1.png";
 
 const HOW_IT_WORKS = [
   {
